@@ -1,1 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Car Details</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+      background-color: #f1f5f9;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
 
+    .details-container {
+      max-width: 800px;
+      margin: auto;
+      background-color: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .details-container img {
+      width: 100%;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      color: #1e3a8a;
+      margin-bottom: 10px;
+    }
+
+    p {
+      font-size: 16px;
+      color: #374151;
+      margin: 6px 0;
+    }
+
+    .back-btn {
+      display: inline-block;
+      margin-top: 20px;
+      background-color: #1e3a8a;
+      color: white;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="details-container" id="carDetails">
+    <!-- Car details will be inserted here -->
+  </div>
+
+  <script type="module">
+    const container = document.getElementById('carDetails');
+    const car = JSON.parse(localStorage.getItem('selectedCar'));
+
+    if (!car) {
+      container.innerHTML = '<p>No car selected. Please go back and choose a car.</p>';
+    } else {
+      container.innerHTML = `
+        <img src="https://via.placeholder.com/600x400?text=${encodeURIComponent(car.name)}" alt="${car.name}" />
+        <h1>${car.year} ${car.name}</h1>
+        <p><strong>Description:</strong> ${car.description}</p>
+        <p><strong>MSRP:</strong> $${car.msrp.toLocaleString()}</p>
+        <p><strong>Invoice:</strong> $${car.invoice ? car.invoice.toLocaleString() : 'N/A'}</p>
+        <a class="back-btn" href="index.html">&#8592; Back to Listings</a>
+      `;
+    }
+  </script>
+</body>
+</html>
