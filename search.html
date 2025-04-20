@@ -1,1 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search for a Car | Fusion Motors</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #1f2937; /* Same gray as the index page */
+    }
+    .overlay {
+      background-color: rgba(0, 0, 0, 0.85);
+      border-radius: 1rem;
+      padding: 2rem;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+    }
+    .loader {
+      border: 5px solid rgba(255, 255, 255, 0.2);
+      border-top: 5px solid #38bdf8;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+      margin: 2rem auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .glass {
+      background-color: rgba(0, 0, 0, 0.6);
+      border-radius: 1rem;
+      background-blend-mode: overlay;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+  </style>
+</head>
+<body class="font-sans text-white">
+  <!-- Nav Bar -->
+  <nav class="bg-gradient-to-r from-indigo-900 to-purple-800 text-white p-6 flex justify-between items-center shadow-lg">
+    <h1 class="text-4xl font-bold tracking-wide">🚗 Fusion Motors</h1>
+    <div class="space-x-6 text-lg" id="nav-links">
+      <a href="index.html" class="hover:text-yellow-300 transition">Home</a>
+      <a href="favorites.html" class="hover:text-yellow-300 transition">Favorites</a>
+      <a href="login.html" class="hover:text-yellow-300 transition" id="login-link">Login</a>
+      <button id="logoutBtn" class="bg-red-600 px-4 py-2 rounded hover:bg-red-700 text-sm font-semibold hidden">Logout</button>
+    </div>
+  </nav>
 
+  <!-- Car Search Section -->
+  <main class="max-w-5xl mx-auto overlay mt-10 p-6">
+    <section class="mb-10">
+      <h2 class="text-2xl font-semibold mb-6 text-center">Search for a Car</h2>
+      <form id="car-form" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <input type="text" id="make" placeholder="Car Make (e.g., Honda)" class="p-3 rounded text-black focus:outline-none" required>
+        <input type="text" id="model" placeholder="Car Model (e.g., Civic)" class="p-3 rounded text-black focus:outline-none" required>
+        <input type="number" id="year" placeholder="Year (optional)" class="p-3 rounded text-black focus:outline-none">
+        <button type="submit" class="col-span-1 md:col-span-3 bg-gradient-to-r from-yellow-400 to-orange-600 text-white py-3 rounded font-semibold hover:opacity-90 transition">Find My Car Info</button>
+      </form>
+    </section>
+
+    <!-- Loader -->
+    <div id="loader" class="loader hidden"></div>
+
+    <!-- Results Display -->
+    <section id="results" class="space-y-6"></section>
+  </main>
+
+  <script>
+    const form = document.getElementById('car-form');
+    const resultsSection = document.getElementById('results');
+    const loader = document.getElementById('loader');
+    const loginLink = document.getElementById('login-link');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    // Firebase authentication
+    import { auth } from './firebase.js';
+    import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js';
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const make = document.getElementById('make').value.trim();
+      const model = document.getElementById('model').value.trim();
+      const year = document.getElementById('year').value.trim();
+
+      const carApiUrl = `https://api.api-ninjas.com/v1/cars?make=${make}&model=${model}${year ? `&year=${year}` : ''}`;
+      const imageApiUrl = `https://www.carimagery.com/api.asmx/GetImageUrl?searchTerm=${make}+${model}`;
+      const specsApiUrl = `https://vpic.nhtsa.dot.gov/api/vehicles/getmodelsformake/${make}?format=json`;
+
+      resultsSection.innerHTML = '';
+      loader.classList.remove('hidden');
+
+      try {
+        const [carRes, specsRes, imageRes] = await Promise.all([
+          fetch(carApiUrl, { headers: { 'X-Api-Key': 'GiC0QdyXbeDCiaK4SvKecA==AY1P5ckuskydXgmZ' } }),
+          fetch(specsApiUrl),
+          fetch(imageApiUrl)
+        ]);
+
+        const carData = await carRes.json();
+        const specsData = await specsRes.json();
+        const imageText = await imageRes.text();
+        const imageUrl = imageText.match(/<string xmlns="[^\"]+">(.*?)<\/string>/)?.[1] || '';
+
+        loader.classList.add('hidden');
+
+        if (carData.length === 0) {
+          resultsSection.innerHTML = '<p class="text-red-400 text-center">No results found. Please try another search.</p>';
+          return;
+        }
+
+        carData.forEach(car => {
+          const isUsed = Math.random() > 0.5 ? "Used" : "New"; // Randomly assign "Used" or "New"
+          const mileage = Math.floor(Math.random() * (200000 - 5000 + 1)) + 5000; // Random mileage between 5,000 and 200,000 miles
+          const price = Math.floor(Math.random() * (35000 - 5000 + 1)) + 5000; // Random price between $5,000 and $35,000
+
+          const card = document.createElement('div');
+          card.className = 'glass p-6 rounded shadow-lg';
+          card.innerHTML = `
+            <h3 class="text-2xl font-bold text-cyan-300 mb-4">${car.make} ${car.model} (${car.year})</h3>
+            <img src="${imageUrl}" alt="${car.make} ${car.model}" class="w-full max-w-md my-4 rounded-xl border border-gray-700 shadow"/>
+            <div class="grid grid-cols-2 gap-2 text-sm">
+              <p><strong>Price:</strong> $${price.toLocaleString()}</p>
+              <p><strong>Status:</strong> ${isUsed}</p>
+              <p><strong>Mileage:</strong> ${mileage.toLocaleString()} miles</p>
+              <p><strong>Transmission:</strong> ${car.transmission}</p>
+              <p><strong>Fuel Type:</strong> ${car.fuel_type}</p>
+              <p><strong>Cylinders:</strong> ${car.cylinders}</p>
+              <p><strong>City MPG:</strong> ${car.city_mpg}</p>
+              <p><strong>Highway MPG:</strong> ${car.highway_mpg}</p>
+              <p><strong>Weight:</strong> ${car.weight_in_lbs} lbs</p>
+              <p class="col-span-2"><strong>Other Models from ${make}:</strong> ${specsData.Results.map(r => r.Model_Name).slice(0, 5).join(', ')}</p>
+            </div>
+          `;
+          resultsSection.appendChild(card);
+        });
+
+      } catch (error) {
+        loader.classList.add('hidden');
+        resultsSection.innerHTML = `<p class="text-red-400 text-center">Error: ${error.message}</p>`;
+      }
+    });
+
+    // Firebase Auth State Change
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        loginLink.classList.add('hidden');
+        logoutBtn.classList.remove('hidden');
+      } else {
+        loginLink.classList.remove('hidden');
+        logoutBtn.classList.add('hidden');
+      }
+    });
+
+    // Logout functionality
+    logoutBtn.addEventListener('click', () => {
+      signOut(auth).then(() => window.location.href = 'login.html');
+    });
+  </script>
+</body>
+</html>
