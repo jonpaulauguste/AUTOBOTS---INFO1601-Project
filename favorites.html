@@ -1,1 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Your Favorites | Fusion Motors</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #1f2937; /* Same gray as the index page */
+    }
+    .overlay {
+      background-color: rgba(0, 0, 0, 0.85);
+      border-radius: 1rem;
+      padding: 2rem;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+    }
+    .glass {
+      background-color: rgba(0, 0, 0, 0.6);
+      border-radius: 1rem;
+      background-blend-mode: overlay;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+  </style>
+</head>
+<body class="font-sans text-white">
+  <!-- Nav Bar -->
+  <nav class="bg-gradient-to-r from-indigo-900 to-purple-800 text-white p-6 flex justify-between items-center shadow-lg">
+    <h1 class="text-4xl font-bold tracking-wide">🚗 Fusion Motors</h1>
+    <div class="space-x-6 text-lg" id="nav-links">
+      <a href="index.html" class="hover:text-yellow-300 transition">Home</a>
+      <a href="search.html" class="hover:text-yellow-300 transition">Search</a>
+      <a href="login.html" class="hover:text-yellow-300 transition" id="login-link">Login</a>
+      <button id="logoutBtn" class="bg-red-600 px-4 py-2 rounded hover:bg-red-700 text-sm font-semibold hidden">Logout</button>
+    </div>
+  </nav>
+
+  <!-- Favorites Section -->
+  <main class="max-w-5xl mx-auto overlay mt-10 p-6">
+    <h2 class="text-2xl font-semibold mb-6 text-center">Your Favorite Cars</h2>
+    <section id="favorites-list" class="space-y-6"></section>
+  </main>
+
+  <footer class="bg-gray-800 text-center p-4 text-sm text-gray-400">
+    &copy; 2025 Fusion Motors. All rights reserved.
+  </footer>
+
+  <script type="module">
+    import { auth, db } from './firebase.js';
+    import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js';
+    import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js';
+
+    const loginLink = document.getElementById('login-link');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const favoritesList = document.getElementById('favorites-list');
+
+    // Firebase authentication and Firestore
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        loginLink.classList.add('hidden');
+        logoutBtn.classList.remove('hidden');
+        loadFavorites(user.uid); // Load favorites when user is authenticated
+      } else {
+        loginLink.classList.remove('hidden');
+        logoutBtn.classList.add('hidden');
+      }
+    });
+
+    logoutBtn.addEventListener('click', () => {
+      signOut(auth).then(() => window.location.href = 'login.html');
+    });
+
+    async function loadFavorites(userId) {
+      const favoritesRef = collection(db, 'users', userId, 'favorites');
+      const querySnapshot = await getDocs(favoritesRef);
+      
+      if (querySnapshot.empty) {
+        favoritesList.innerHTML = '<p>No favorites yet!</p>';
+        return;
+      }
+
+      querySnapshot.forEach(doc => {
+        const car = doc.data();
+        const card = document.createElement('div');
+        card.className = 'glass p-6 rounded shadow-lg';
+        card.innerHTML = `
+          <h3 class="text-2xl font-bold text-cyan-300 mb-4">${car.make} ${car.model} (${car.year})</h3>
+          <p><strong>Price:</strong> $${car.price}</p>
+          <p><strong>Mileage:</strong> ${car.mileage} miles</p>
+          <p><strong>Status:</strong> ${car.isUsed}</p>
+        `;
+        favoritesList.appendChild(card);
+      });
+    }
+  </script>
+</body>
+</html>
 
