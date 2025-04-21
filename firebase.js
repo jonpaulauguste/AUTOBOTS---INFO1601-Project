@@ -1,11 +1,8 @@
 // firebase.js
-
-// Import necessary Firebase SDKs
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
 
-// Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyAKp9EPhSPOc55d4GcQPmpNwfE5RWlZpkg",
   authDomain: "autobots---info1601.firebaseapp.com",
@@ -21,5 +18,4 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Export Firebase services for use in other files
-export { auth, db, signInWithEmailAndPassword, createUserWithEmailAndPassword };
+export { auth, db };

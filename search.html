@@ -1,20 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Search for a Car | Fusion Motors</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <style>
     body {
-      background-color: #1f2937; /* Tailwind gray-800 */
+      background-color: #1f2937; /* Same gray as the index page */
     }
-    .glass {
-      background-color: rgba(0, 0, 0, 0.6);
+    .overlay {
+      background-color: rgba(0, 0, 0, 0.85);
       border-radius: 1rem;
-      background-blend-mode: overlay;
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      padding: 2rem;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
     }
     .loader {
       border: 5px solid rgba(255, 255, 255, 0.2);
@@ -28,6 +27,13 @@
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
+    }
+    .glass {
+      background-color: rgba(0, 0, 0, 0.6);
+      border-radius: 1rem;
+      background-blend-mode: overlay;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
     }
   </style>
 </head>
@@ -63,88 +69,99 @@
   </main>
 
   <script type="module">
-    import { auth } from './firebase.js';
+    import { auth, db } from './firebase.js';
     import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js';
-    import { getFirestore, collection, addDoc } from 'https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js';
-
+    import { collection, addDoc } from 'https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js';
+  
     const form = document.getElementById('car-form');
     const resultsSection = document.getElementById('results');
     const loader = document.getElementById('loader');
-    const db = getFirestore();
-
+    const loginLink = document.getElementById('login-link');
+    const logoutBtn = document.getElementById('logoutBtn');
+  
     form.addEventListener('submit', async (e) => {
-  e.preventDefault();
-
-  const make = document.getElementById('make').value.trim();
-  const model = document.getElementById('model').value.trim();
-  const year = document.getElementById('year').value.trim();
-
-  const carApiUrl = `https://api.api-ninjas.com/v1/cars?make=${make}&model=${model}${year ? `&year=${year}` : ''}`;
-  const imageApiUrl = `https://www.carimagery.com/api.asmx/GetImageUrl?searchTerm=${make}+${model}`;
-  const specsApiUrl = `https://vpic.nhtsa.dot.gov/api/vehicles/getmodelsformake/${make}?format=json`;
-
-  resultsSection.innerHTML = '';
-  loader.classList.remove('hidden');
-
-  try {
-    const [carRes, specsRes, imageRes] = await Promise.all([
-      fetch(carApiUrl, { headers: { 'X-Api-Key': 'GiC0QdyXbeDCiaK4SvKecA==AY1P5ckuskydXgmZ' } }),
-      fetch(specsApiUrl),
-      fetch(imageApiUrl)
-    ]);
-
-    // Log the responses to the console
-    const carData = await carRes.json();
-    const specsData = await specsRes.json();
-    const imageText = await imageRes.text();
-
-    console.log('Car API Response:', carData);  // Log the car data
-    console.log('Specs API Response:', specsData);  // Log the specs data
-    console.log('Image API Response:', imageText);  // Log the image data
-
-    const imageUrl = imageText.match(/<string xmlns="[^\"]+">(.*?)<\/string>/)?.[1] || '';
-
-    loader.classList.add('hidden');
-
-    if (carData.length === 0) {
-      resultsSection.innerHTML = '<p class="text-red-400 text-center">No results found. Please try another search.</p>';
-      return;
-    }
-
-    carData.forEach(car => {
-      const isUsed = Math.random() > 0.5 ? "Used" : "New"; // Randomly assign "Used" or "New"
-      const mileage = Math.floor(Math.random() * (200000 - 5000 + 1)) + 5000; // Random mileage between 5,000 and 200,000 miles
-      const price = Math.floor(Math.random() * (35000 - 5000 + 1)) + 5000; // Random price between $5,000 and $35,000
-
-      const card = document.createElement('div');
-      card.className = 'glass p-6 rounded shadow-lg';
-      card.innerHTML = `
-        <h3 class="text-2xl font-bold text-cyan-300 mb-4">${car.make} ${car.model} (${car.year})</h3>
-        <img src="${imageUrl}" alt="${car.make} ${car.model}" class="w-full max-w-md my-4 rounded-xl border border-gray-700 shadow"/>
-        <div class="grid grid-cols-2 gap-2 text-sm">
-          <p><strong>Price:</strong> $${price.toLocaleString()}</p>
-          <p><strong>Status:</strong> ${isUsed}</p>
-          <p><strong>Mileage:</strong> ${mileage.toLocaleString()} miles</p>
-          <p><strong>Transmission:</strong> ${car.transmission}</p>
-          <p><strong>Fuel Type:</strong> ${car.fuel_type}</p>
-          <p><strong>Cylinders:</strong> ${car.cylinders}</p>
-          <p><strong>City MPG:</strong> ${car.city_mpg}</p>
-          <p><strong>Highway MPG:</strong> ${car.highway_mpg}</p>
-          <p><strong>Weight:</strong> ${car.weight_in_lbs} lbs</p>
-          <p class="col-span-2"><strong>Other Models from ${make}:</strong> ${specsData.Results.map(r => r.Model_Name).slice(0, 5).join(', ')}</p>
-        </div>
-      `;
-      resultsSection.appendChild(card);
+      e.preventDefault();
+  
+      const make = document.getElementById('make').value.trim();
+      const model = document.getElementById('model').value.trim();
+      const year = document.getElementById('year').value.trim();
+  
+      const carApiUrl = `https://api.api-ninjas.com/v1/cars?make=${make}&model=${model}${year ? `&year=${year}` : ''}`;
+      const imageApiUrl = `https://www.carimagery.com/api.asmx/GetImageUrl?searchTerm=${make}+${model}`;
+      const specsApiUrl = `https://vpic.nhtsa.dot.gov/api/vehicles/getmodelsformake/${make}?format=json`;
+  
+      resultsSection.innerHTML = '';
+      loader.classList.remove('hidden');
+  
+      try {
+        const [carRes, specsRes, imageRes] = await Promise.all([
+          fetch(carApiUrl, { headers: { 'X-Api-Key': 'GiC0QdyXbeDCiaK4SvKecA==AY1P5ckuskydXgmZ' } }),
+          fetch(specsApiUrl),
+          fetch(imageApiUrl)
+        ]);
+  
+        const carData = await carRes.json();
+        const specsData = await specsRes.json();
+        const imageText = await imageRes.text();
+        const imageUrl = imageText.match(/<string xmlns="[^\"]+">(.*?)<\/string>/)?.[1] || '';
+  
+        loader.classList.add('hidden');
+  
+        if (carData.length === 0) {
+          resultsSection.innerHTML = '<p class="text-red-400 text-center">No results found. Please try another search.</p>';
+          return;
+        }
+  
+        carData.forEach(car => {
+          const price = Math.floor(Math.random() * (35000 - 5000 + 1)) + 5000; // Random price
+          const isUsed = Math.random() > 0.5 ? "Used" : "New"; // Random "Used"/"New"
+          const mileage = Math.floor(Math.random() * (200000 - 5000 + 1)) + 5000; // Random mileage
+  
+          const card = document.createElement('div');
+          card.className = 'glass p-6 rounded shadow-lg';
+          card.innerHTML = `
+            <h3 class="text-2xl font-bold text-cyan-300 mb-4">${car.make} ${car.model} (${car.year})</h3>
+            <img src="${imageUrl}" alt="${car.make} ${car.model}" class="w-full max-w-md my-4 rounded-xl border border-gray-700 shadow"/>
+            <div class="grid grid-cols-2 gap-2 text-sm">
+              <p><strong>Price:</strong> $${price.toLocaleString()}</p>
+              <p><strong>Status:</strong> ${isUsed}</p>
+              <p><strong>Mileage:</strong> ${mileage.toLocaleString()} miles</p>
+              <p><strong>Transmission:</strong> ${car.transmission}</p>
+              <p><strong>Fuel Type:</strong> ${car.fuel_type}</p>
+              <p><strong>Cylinders:</strong> ${car.cylinders}</p>
+              <p><strong>City MPG:</strong> ${car.city_mpg}</p>
+              <p><strong>Highway MPG:</strong> ${car.highway_mpg}</p>
+              <p><strong>Weight:</strong> ${car.weight_in_lbs} lbs</p>
+            </div>
+            <button class="favorite-btn bg-yellow-500 text-black px-4 py-2 mt-4 rounded hover:bg-yellow-600 hover:scale-105 transition" data-car='${JSON.stringify({ ...car, price, imageUrl })}'>Add to Favorites</button>
+          `;
+          resultsSection.appendChild(card);
+        });
+  
+        // Add event listener to each "Add to Favorites" button
+        document.querySelectorAll('.favorite-btn').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (!auth.currentUser) {
+              alert('Please log in to add favorites.');
+              return;
+            }
+            const car = JSON.parse(btn.dataset.car);
+            // Save to Firestore
+            await addDoc(collection(db, `favorites/${auth.currentUser.uid}/cars`), {
+              ...car,
+              timestamp: new Date()
+            });
+            alert(`${car.make} ${car.model} added to favorites!`);
+          });
+        });
+  
+      } catch (error) {
+        loader.classList.add('hidden');
+        resultsSection.innerHTML = `<p class="text-red-400 text-center">Error: ${error.message}</p>`;
+      }
     });
-
-  } catch (error) {
-    loader.classList.add('hidden');
-    resultsSection.innerHTML = `<p class="text-red-400 text-center">Error: ${error.message}</p>`;
-    console.log('Error:', error);  // Log the error message
-  }
-});
-
-    // Firebase Auth State Change
+  
     onAuthStateChanged(auth, (user) => {
       if (user) {
         loginLink.classList.add('hidden');
@@ -154,11 +171,12 @@
         logoutBtn.classList.add('hidden');
       }
     });
-
-    // Logout functionality
+  
     logoutBtn.addEventListener('click', () => {
       signOut(auth).then(() => window.location.href = 'login.html');
     });
   </script>
+  
+  
 </body>
 </html>
